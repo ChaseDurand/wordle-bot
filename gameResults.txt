@@ -1,0 +1,10 @@
+cigar,3
+rebut,4
+sissy,5
+humph,6
+awake,3
+blush,4
+focal,3
+evade,3
+naval,4
+serve,2

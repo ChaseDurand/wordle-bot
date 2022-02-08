@@ -1,6 +1,7 @@
 #include <vector>
 #include <string>
 
+// Answer list that is moved through linearly daily.
 std::vector<std::string> solutions = {"cigar",
 "rebut",
 "sissy",
@@ -2317,6 +2318,8 @@ std::vector<std::string> solutions = {"cigar",
 "rural",
 "shave"};
 
+// Valid guesses
+// Does not include words in answer list
 std::vector<std::string> dictionary = {"aahed",
 "aalii",
 "aargh",
