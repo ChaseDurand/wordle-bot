@@ -36,3 +36,7 @@
 
 # VS Code
 *.vscode/
+
+# Output files
+firstWord.txt
+gameResults.txt
