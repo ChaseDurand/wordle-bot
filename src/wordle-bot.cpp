@@ -2,6 +2,7 @@
 #include <fstream>
 #include <algorithm>
 #include <map>
+#include <thread>
 #include "lists.h"
 #define WORD_SIZE 5
 
@@ -78,39 +79,28 @@ void checkGuess(std::string guess, std::string answer, std::vector<char> &grn, s
 void reduceList(std::vector<std::string> &list, std::vector<char> &grn, std::map<char, std::vector<int>> &ylw, std::map<char, std::vector<int>> &gry){
     int initialSize = list.size();
     int removed = 0;
-    // Filter by greens
-    std::vector<std::string> removedWords = {};
-    for(std::string word : list){
+
+    list.erase(std::remove_if(list.begin(), list.end(), [grn, ylw, gry](std::string word){
+        // Filter by greens
         for(int i = 0; i < WORD_SIZE; ++i){
             if (grn[i] != '_'){
                 if (grn[i] != word[i]){
                     // word is not valid
-                    // remove and continue
-                    removed++;
-                    removedWords.push_back(word);
-                    i = WORD_SIZE;
+                    return true;
                 }
             }
         }
-    }
-    for (std::string wordToRemove : removedWords){
-        list.erase(std::find(list.begin(), list.end(), wordToRemove));
-    }
-    removedWords.clear();
 
-    // Filter by yellows
-    for(std::string word : list){
 
+        // Filter by yellows
         // For every yellow character
         for(auto iter = ylw.begin(); iter != ylw.end(); ++iter){
 
             // For every yellow character's position
             for(int yellowPositions : iter->second){
                 if(iter->first == word[yellowPositions]){
-                    // Word has a letter in yellow position
-
-                    removed++;
-                    removedWords.push_back(word);
+                    // Word has a letter in yellow position, not valid
+                    return true;
                 }
             }
             int occurances = 0;
@@ -123,8 +113,7 @@ void reduceList(std::vector<std::string> &list, std::vector<char> &grn, std::map
             if(gry.count(iter->first)){
                 int exactCount = iter->second.size() + std::count(grn.begin(), grn.end(), iter->first);
                 if (occurances != exactCount){
-                    removed++;
-                    removedWords.push_back(word);
+                    return true;
                 }
             }
             else{
@@ -132,48 +121,26 @@ void reduceList(std::vector<std::string> &list, std::vector<char> &grn, std::map
                 int minCount = iter->second.size() + std::count(grn.begin(), grn.end(), iter->first);
                 //if occcurances is less than minCount, remove word
                 if (occurances < minCount){
-                    removed++;
-                    removedWords.push_back(word);
+                    return true;
                 }
             }
         }
-    }
-    for (std::string wordToRemove : removedWords){
-        if(std::find(list.begin(), list.end(), wordToRemove) != list.end()){
-            list.erase(std::find(list.begin(), list.end(), wordToRemove));
-        }
-        else{
-            removed--;
-        }
-    }
-    removedWords.clear();
 
-    // Filter by greys
-    // For every word
-    for(std::string word : list){
+        // Filter by greys
         // For every grey character
         for(auto iter = gry.begin(); iter != gry.end(); ++iter){
             // For every grey character's position
             for(int greyPositions : iter->second){
                 if(iter->first == word[greyPositions]){
                     // Word has a letter in grey position
-                    removed++;
-                    removedWords.push_back(word);
+                    return true;
                 }
             }
         }
-    }
 
-    for (std::string wordToRemove : removedWords){
-        if(std::find(list.begin(), list.end(), wordToRemove) != list.end()){
-            list.erase(std::find(list.begin(), list.end(), wordToRemove));
-        }
-        else{
-            removed--;
-        }
-    }
+        return false;
 
-    std::cout << "Removed " << removed << " words from list of " << initialSize<< std::endl;
+    }), list.end());
     return;
 }
 
@@ -181,37 +148,86 @@ bool isSolved(std::vector<char> greens){
     return std::count(greens.begin(), greens.end(),'_') == 0;
 }
 
-int main() {
-    std::cout << "Running..." << std::endl;
-    std::vector<std::string> totalList = solutions;
-    totalList.insert(totalList.end(), dictionary.begin(), dictionary.end());
+void playGame(std::string answer, std::vector<std::string> answerSpace, std::vector<std::string> totalSpace){
+    int round = 0;
+    std::cout << "Starting game. Target word: " << answer << std::endl;
+    std::vector<std::string> solutionSpace = solutions;
+    // greens
+    // list of letter and position
+    // list of 5 letters
+    std::vector<char> greens {'_','_','_','_','_'};
+    // yellows
+    // list of letters and positions
+    std::map<char, std::vector<int>> yellows;
+    // greys
+    // list of letters
+    std::map<char, std::vector<int>> greys;
+
+    // Calculate distribution of letters per position of answers
+    std::vector<std::vector<int>> answerCharDist(WORD_SIZE, std::vector<int>(26, 0));
+    for(std::string word : solutionSpace){
+        // Add to distribution
+        getDist(word, answerCharDist);
+    }
+
+
     std::map<std::string, int> wordScore = {};
+    // Determine best guess
+    // For each word in total list, calculate "score" to find best first guess
+    int maxSum = 0;
+    int sum = 0;
+    std::string maxWord = "";
+    for(std::string word : totalSpace){
+        sum = getScore(word, answerCharDist);
+        wordScore.insert(std::pair<std::string, int>(word, sum));
+        if (sum > maxSum){
+            maxSum = sum;
+            maxWord = word;
+        }
+    }
 
-    std::ofstream gameResults;
-    //gameResults.open("gameResults.txt", std::ios_base::app);
+    
+    while(!isSolved(greens)){
+        std::cout << "Round " << ++round << ", "<< "guessing " << maxWord << std::endl;
+        checkGuess(maxWord, answer, greens, yellows, greys);
 
-    std::vector<std::string> tmpSolutions(solutions.begin(), solutions.begin()+3);
-    for(std::string answer : tmpSolutions){
-        // For every answer, play a game.
-        int round = 0;
-        std::cout << "Starting game. Target word: " << answer << std::endl;
-        std::vector<std::string> solutionSpace = solutions;
-        std::vector<std::string> totalSpace = totalList;
+        if(isSolved(greens)){
+            break;
+        }
 
-        // greens
-        // list of letter and position
-        // list of 5 letters
-        std::vector<char> greens {'_','_','_','_','_'};
+        std::cout << "Greens: ";
+        for(int i = 0 ; i < WORD_SIZE; ++i){
+            std::cout << greens[i];
+        }
+        std::cout << std::endl;
+        std::cout << "Yellows: ";
+        for(auto iter = yellows.begin(); iter != yellows.end(); ++iter){
+            std::cout << iter->first << ": ";
+            for(int i : iter->second){
+                std::cout << i << ", ";
+            }
+        }
+        std::cout << std::endl;
 
-        // yellows
-        // list of letters and positions
-        // std::vector<std::pair<char,int>> yellows = {};
-        std::map<char, std::vector<int>> yellows;
 
-        // greys
-        // list of letters
-        // std::vector<char> greys = {};
-        std::map<char, std::vector<int>> greys;
+        // Reduce solution space
+        reduceList(solutionSpace, greens, yellows, greys);
+
+        // Reduce dictionary space
+        reduceList(totalSpace, greens, yellows, greys);
+
+
+        // Remove guess from solution and dictionary spaces
+        if(std::find(solutionSpace.begin(), solutionSpace.end(), maxWord) != solutionSpace.end()){
+            solutionSpace.erase(std::find(solutionSpace.begin(), solutionSpace.end(), maxWord));
+        }
+        if(std::find(totalSpace.begin(), totalSpace.end(), maxWord) != totalSpace.end()){
+            totalSpace.erase(std::find(totalSpace.begin(), totalSpace.end(), maxWord));
+        } 
+
+
+        // Reset yellows
+        yellows.clear();
 
         // Calculate distribution of letters per position of answers
         std::vector<std::vector<int>> answerCharDist(WORD_SIZE, std::vector<int>(26, 0));
@@ -222,9 +238,9 @@ int main() {
 
         // Determine best guess
         // For each word in total list, calculate "score" to find best first guess
-        int maxSum = 0;
-        int sum = 0;
-        std::string maxWord = "";
+        maxSum = 0;
+        sum = 0;
+        maxWord = "";
         for(std::string word : totalSpace){
             // std::cout << word << std::endl;
             sum = getScore(word, answerCharDist);
@@ -232,83 +248,25 @@ int main() {
             if (sum > maxSum){
                 maxSum = sum;
                 maxWord = word;
-                // std::cout << word << ": " << sum << std::endl;
             }
         }
-
-        
-        while(!isSolved(greens)){
-            std::cout << "Round " << ++round << ", "<< "guessing " << maxWord << std::endl;
-            checkGuess(maxWord, answer, greens, yellows, greys);
-
-            if(isSolved(greens)){
-                break;
-            }
-
-            std::cout << "Greens: ";
-            for(int i = 0 ; i < WORD_SIZE; ++i){
-                std::cout << greens[i];
-            }
-            std::cout << std::endl;
-            std::cout << "Yellows: ";
-            for(auto iter = yellows.begin(); iter != yellows.end(); ++iter){
-                std::cout << iter->first << ": ";
-                for(int i : iter->second){
-                    std::cout << i << ", ";
-                }
-            }
-            std::cout << std::endl;
-
-
-            // Reduce solution space
-            reduceList(solutionSpace, greens, yellows, greys);
-
-            // Reduce dictionary space
-            reduceList(totalSpace, greens, yellows, greys);
-
-
-            // Remove guess from solution and dictionary spaces
-            if(std::find(solutionSpace.begin(), solutionSpace.end(), maxWord) != solutionSpace.end()){
-                solutionSpace.erase(std::find(solutionSpace.begin(), solutionSpace.end(), maxWord));
-            }
-            if(std::find(totalSpace.begin(), totalSpace.end(), maxWord) != totalSpace.end()){
-                totalSpace.erase(std::find(totalSpace.begin(), totalSpace.end(), maxWord));
-            } 
-
-
-            // Reset yellows
-            yellows.clear();
-
-            // Calculate distribution of letters per position of answers
-            std::vector<std::vector<int>> answerCharDist(WORD_SIZE, std::vector<int>(26, 0));
-            for(std::string word : solutionSpace){
-                // Add to distribution
-                getDist(word, answerCharDist);
-            }
-
-            // Determine best guess
-            // For each word in total list, calculate "score" to find best first guess
-            maxSum = 0;
-            sum = 0;
-            maxWord = "";
-            for(std::string word : totalSpace){
-                // std::cout << word << std::endl;
-                sum = getScore(word, answerCharDist);
-                wordScore.insert(std::pair<std::string, int>(word, sum));
-                if (sum > maxSum){
-                    maxSum = sum;
-                    maxWord = word;
-                    // std::cout << word << ": " << sum << std::endl;
-                }
-            }
-        }
-        gameResults.open("gameResults.txt", std::ios_base::app);
-        std::cout << answer << ',' << round << '\n';
-        gameResults << answer << ',' << round << '\n';
-        gameResults.close();
-
-
     }
-    //
+    std::ofstream gameResults;
+    gameResults.open("gameResults.txt", std::ios_base::app);
+    std::cout << answer << ',' << round << '\n';
+    gameResults << answer << ',' << round << '\n';
+    gameResults.close();
+    return;
+}
+
+int main() {
+    std::cout << "Running..." << std::endl;
+    std::vector<std::string> totalList = solutions;
+    totalList.insert(totalList.end(), dictionary.begin(), dictionary.end());
+    std::map<std::string, int> wordScore = {};
+    std::vector<std::string> tmpSolutions(solutions.begin(), solutions.end());
+    for(std::string answer : tmpSolutions){
+        playGame(answer, solutions, totalList);
+    }
     return 0;
 }
