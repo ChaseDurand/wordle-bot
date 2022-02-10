@@ -286,6 +286,13 @@ int main() {
     std::vector<std::string> totalList = solutions;
     totalList.insert(totalList.end(), dictionary.begin(), dictionary.end());
     
+    // Calculate new distribution of letters per position of answers
+    std::vector<std::vector<int>> answerCharDist(WORD_SIZE,
+                                    std::vector<int>(26, 0)  );
+    for(std::string word : solutions){
+        addToDist(word, answerCharDist);
+    }
+    
     // Modify to test on subset of answer list
     std::vector<std::string> solutionSubset(solutions.begin(), solutions.end());
     for(std::string answer : solutionSubset){
