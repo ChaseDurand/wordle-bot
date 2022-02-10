@@ -115,14 +115,31 @@ void reduceList(std::vector<std::string> &list, std::vector<char> &grn,
             }
         }
         // Filter by greys
-        // For every grey character
-        // TODO check if this checks all positions, not just where grey was found
-        for(auto iter = gry.begin(); iter != gry.end(); ++iter){
-            // For every grey character's position
-            for(int greyPositions : iter->second){
-                if(iter->first == word[greyPositions]){
-                    // Word has a letter in grey position
-                    return true;
+        for(auto iter = gry.begin(); iter != gry.end(); ++iter){     
+            // If we have grey and no green/yellow, we know there are no occurances of this letter
+            int greenCount = 0;
+            for(int i = 0; i < WORD_SIZE; ++i){
+                if(grn[i] == iter->first){
+                    greenCount++;
+                }
+            }
+            int yellowCount = ylw.count(iter->first);
+            if( (greenCount == 0) && (yellowCount == 0)){
+                // Check every position
+                for(int i = 0; i < WORD_SIZE; ++i){
+                    if(iter->first == word[i]){
+                        return true;
+                    }
+                }
+
+            }
+            else{
+                // Otherwise, there are occurances of this letter, but not in this position
+                for(int greyPositions : iter->second){
+                    if(iter->first == word[greyPositions]){
+                        // Word has a letter in grey position
+                        return true;
+                    }
                 }
             }
         }
@@ -195,6 +212,15 @@ void playGame(std::string answer, std::vector<std::string> answerSpace, std::vec
         std::cout << std::endl;
         std::cout << "Yellows: ";
         for(auto iter = yellows.begin(); iter != yellows.end(); ++iter){
+            std::cout << iter->first << ": ";
+            for(int i : iter->second){
+                std::cout << i << ", ";
+            }
+        }
+        std::cout << std::endl;
+
+        std::cout << "Greys: ";
+        for(auto iter = greys.begin(); iter != greys.end(); ++iter){
             std::cout << iter->first << ": ";
             for(int i : iter->second){
                 std::cout << i << ", ";

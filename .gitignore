@@ -39,7 +39,6 @@
 
 # Output files
 firstWord.txt
-gameResults.txt
 
 # Misc files
 *.DS_Store
