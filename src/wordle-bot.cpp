@@ -272,7 +272,7 @@ void playGame(std::string answer, std::vector<std::string> answerSpace, std::vec
 
     // Write results to file and terminal
     std::ofstream gameResults;
-    gameResults.open("gameResults.txt", std::ios_base::app);
+    gameResults.open("gameResults.csv", std::ios_base::app);
     std::cout << answer << ',' << round << '\n';
     gameResults << answer << ',' << round << '\n';
     gameResults.close();
