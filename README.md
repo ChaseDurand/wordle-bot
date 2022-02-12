@@ -1,5 +1,5 @@
 # wordle-bot
-A repo for experimenting with powerlanguage's [wordle](https://www.powerlanguage.co.uk/wordle/).
+A repo for experimenting with powerlanguage's [wordle](https://www.powerlanguage.co.uk/wordle/). All work is done with word lists from release e65ce0a5, which have been modified since NYT's aquisition.
 
 
 ## Operation
