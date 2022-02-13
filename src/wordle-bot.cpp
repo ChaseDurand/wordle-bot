@@ -3,27 +3,19 @@
 #include <algorithm>
 #include <map>
 #include <thread>
-#include "lists.h"
-#include "ansi_colors.h"
+#include "wordle-lists.h"
 // Length of each word
 #define WORD_SIZE 5
 // Number of threads
 #define THREAD_COUNT 8
 
-// Keep track of letter colors.
+// Track of letter colors.
 class TileColors {
     public:
         TileColors(){
             greens = std::vector<char>(WORD_SIZE, '_');
         }
-    private:
-        // Greens, list of 5 letters, '_' for default.
-        std::vector<char> greens;
-        // Yellows, map of letters and positions.
-        std::map<char, std::vector<int>> yellows;
-        // Greys, map of letters and positions.
-        std::map<char, std::vector<int>> greys;
-    public:
+
         // Return true if guess is correct and game is solved.
         bool isSolved(){
             return std::count(greens.begin(), greens.end(),'_') == 0;
@@ -45,7 +37,6 @@ class TileColors {
         void addGrey(const char& l, const int& p){
             greys[l].push_back(p);
         }
-
         
         // Return number of green tiles of a given character.
         int getGreenCount(const char& c) const{
@@ -109,6 +100,14 @@ class TileColors {
         std::map<char, std::vector<int>>::const_iterator greysEnd() const{
             return greys.end();
         }
+
+    private:
+        // Greens, list of 5 letters, '_' for default.
+        std::vector<char> greens;
+        // Yellows, map of letters and positions.
+        std::map<char, std::vector<int>> yellows;
+        // Greys, map of letters and positions.
+        std::map<char, std::vector<int>> greys;
 };
 
 // Add a word to a letter distribution table.
@@ -152,34 +151,39 @@ void checkGuess(const std::string& guess, const std::string& answer,
     TileColors& tc){
     // Keep track of letters not colored for accurate letter counting.
     std::vector<char> lettersRemaining(answer.begin(), answer.end());
-    // Use color codes to store color mask.
-    std::vector<std::string> highlightMask(WORD_SIZE, RESET);
+
+    // Need to process colors in separate passes.
+    enum color{
+        INIT,
+        YELLOW,
+        GREEN
+    };
+    std::vector<color> colorMask(WORD_SIZE, INIT);
+
     // Identify greens.
     for(int i = 0; i < WORD_SIZE; ++i){
         if(guess[i] == answer[i]){
             lettersRemaining.erase(std::find(lettersRemaining.begin(), lettersRemaining.end(), guess[i]));
-            highlightMask[i] = GREEN;
+            colorMask[i] = GREEN;
             tc.addGreen(guess[i], i);
         }
     }
     // Identify yellows.
     for(int i = 0; i < WORD_SIZE; ++i){
-        if(highlightMask[i] != GREEN){
+        if(colorMask[i] != GREEN){
             if(std::find(lettersRemaining.begin(), lettersRemaining.end(), guess[i]) != lettersRemaining.end()){
                 lettersRemaining.erase(std::find(lettersRemaining.begin(), lettersRemaining.end(), guess[i]));
-                highlightMask[i] = YELLOW;
+                colorMask[i] = YELLOW;
                 tc.addYellow(guess[i], i);
             }
         }
     }
     // Identify greys and print guess result.
     for(int i = 0; i < WORD_SIZE; ++i){
-        if (highlightMask[i] == RESET){
+        if (colorMask[i] == INIT){
             tc.addGrey(guess[i], i);
         }
-        // std::cout << highlightMask[i] << guess[i] << RESET;
     }
-    // std::cout << std::endl;
     return;
 }
 
