@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <map>
 #include <thread>
-#include <mutex>
 #include "lists.h"
 #include "ansi_colors.h"
 // Length of each word
@@ -349,11 +348,12 @@ void validateList(const std::vector<std::string>& l){
     return;
 }
 
+// Play games and save results given a set of answers, total word list,
+// and results destination.
 void playGames(const std::vector<std::string>& answers,
     std::vector<std::string> totalList,
     std::vector<std::pair<std::string, int>>& r){
     for(int i = 0; i < answers.size(); ++i){
-            // r.push_back( playGame(answers[i], answers, totalList) );
             r[i] = playGame(answers[i], answers, totalList);
     }
     return;
