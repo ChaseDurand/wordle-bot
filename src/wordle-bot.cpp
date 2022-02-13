@@ -6,8 +6,9 @@
 #include <mutex>
 #include "lists.h"
 #include "ansi_colors.h"
-// Size of each word
+// Length of each word
 #define WORD_SIZE 5
+// Number of threads
 #define THREAD_COUNT 8
 
 // Keep track of letter colors.
