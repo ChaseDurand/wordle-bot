@@ -3,10 +3,12 @@
 #include <algorithm>
 #include <map>
 #include <thread>
+#include <mutex>
 #include "lists.h"
 #include "ansi_colors.h"
 // Size of each word
 #define WORD_SIZE 5
+#define THREAD_COUNT 8
 
 // Keep track of letter colors.
 class TileColors {
@@ -175,9 +177,9 @@ void checkGuess(const std::string& guess, const std::string& answer,
         if (highlightMask[i] == RESET){
             tc.addGrey(guess[i], i);
         }
-        std::cout << highlightMask[i] << guess[i] << RESET;
+        // std::cout << highlightMask[i] << guess[i] << RESET;
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
     return;
 }
 
@@ -280,12 +282,14 @@ void reduceList(std::vector<std::string>& list, const TileColors& tc){
 }
 
 // Log round results to file.
-void logGameResults(const std::vector<std::pair<std::string, int>>& r){
+void logGameResults(const std::vector<std::vector<std::pair<std::string, int>>>& r){
     std::cout << "Writing results to gameResults.csv" << std::endl;
     std::ofstream gameResults;
     gameResults.open("gameResults.csv", std::ios_base::app);
-    for(const std::pair<std::string, int>& i : r){
-        gameResults << i.first << ',' << i.second << '\n';
+    for(const std::vector<std::pair<std::string, int>>& i : r){
+        for(const std::pair<std::string, int>& j : i){
+            gameResults << j.first << ',' << j.second << '\n';
+        }
     }
     gameResults.close();
     return;
@@ -299,7 +303,6 @@ std::pair<std::string, int> playGame(const std::string& answer,
     int round = 0;
     std::string guess = "";
     TileColors tc;
-    std::cout << "Starting game. Target word: " << answer << std::endl;
 
     // Play rounds until answer is guessed.
     while(!tc.isSolved()){
@@ -326,13 +329,6 @@ std::pair<std::string, int> playGame(const std::string& answer,
         // Calculate scores from distribution and return best guess.
         guess = getBestGuess(answerCharDist, totalList);
 
-        // Print round and color if round exceeds 6.
-        if(round > 6){
-            std::cout << RED;
-        }
-        std::cout << "Round " << round << ": " << "guessing " << guess
-            << RESET << std::endl;
-
         checkGuess(guess, answer, tc);
     }
     return std::pair<std::string, int>(answer,round);
@@ -352,6 +348,16 @@ void validateList(const std::vector<std::string>& l){
     return;
 }
 
+void playGames(const std::vector<std::string>& answers,
+    std::vector<std::string> totalList,
+    std::vector<std::pair<std::string, int>>& r){
+    for(int i = 0; i < answers.size(); ++i){
+            // r.push_back( playGame(answers[i], answers, totalList) );
+            r[i] = playGame(answers[i], answers, totalList);
+    }
+    return;
+}
+
 int main() {
     std::cout << "Running..." << std::endl;
 
@@ -362,15 +368,30 @@ int main() {
     std::vector<std::string> totalList = answers;
     totalList.insert(totalList.end(), dictionary.begin(), dictionary.end());
 
-    std::vector<std::pair<std::string, int>> gameResults;
-    gameResults.reserve(answers.size());
+    std::vector<std::thread> threads;
 
-    // Play a game for every answer in answers list.
-    for(const std::string& a : answers){
-        gameResults.push_back(playGame(a, answers, totalList));
+    std::vector<std::vector<std::string>> threadAnswers(THREAD_COUNT);
+
+    // Split answers into THREAD_COUNT different vectors
+    for(int i = 0; i < answers.size(); ++i){
+        threadAnswers[i % THREAD_COUNT].push_back(answers[i]);
+    }
+
+    std::vector<std::vector<std::pair<std::string, int>>>
+        gameResults(THREAD_COUNT);
+
+    for(int i = 0; i < THREAD_COUNT; ++i){
+        gameResults[i].resize(threadAnswers[i].size());
+        threads.push_back(std::thread(playGames, threadAnswers[i], totalList,
+            std::ref(gameResults[i])));
+    }
+
+    for(auto& t : threads){
+        t.join();
     }
 
     // Output the game result (answer,rounds) to file.
     logGameResults(gameResults);
+    std::cout << "Finished!" << std::endl;
     return 0;
 }
