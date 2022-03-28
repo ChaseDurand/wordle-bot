@@ -9,7 +9,7 @@ The bot plays using hard mode requirements. For each round, the distribution of 
 <img alt='Initial character distribution per position of all answers' src='media/initialDistribution.png'>
 </p>
 
-Currently implementation of hard mode solves 98.9% of solutions within 6 rounds.
+Current implementation of hard mode solves 98.9% of solutions within 6 rounds.
 
 <p align='center'>
 <img alt='Distribution of rounds required to guess answers' src='media/roundDistribution.png'>
